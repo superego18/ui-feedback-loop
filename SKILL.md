@@ -40,6 +40,7 @@ Playwright MCP는 `--headless`로 실행한다(ai-config의 MCP 설정에 들어
 1. 타입 체크와 테스트를 돌린다.
 2. **캡처 직전에 dev 서버를 재시작한다.** Next.js 16 Turbopack에서는 브라우저가 dev 서버에 연결된 채로 파일을 고치면, 그 뒤로 서버가 옛 코드로 HTML을 만든다. 브라우저를 닫아도 풀리지 않고 재시작해야만 풀린다(2026-10 재현 확인). 사용자가 앱을 열어 둔 것만으로도 생기므로 매 라운드 재시작을 기본으로 하고, 사용자에게 한 줄 알린다. 사용자 화면에 hydration 오류가 보이면 같은 원인이다.
 3. 바뀐 화면을 1440px·390px로 다시 캡처한다(`.ui-feedback/r<라운드>-<화면>.png`).
+   - **2배 해상도로 찍는다.** [`assets/capture-2x.js`](assets/capture-2x.js)를 `browser_run_code_unsafe`에 넘기고 맨 위 네 값(URL, 저장 경로, 화면 크기, 영역 선택자)만 바꾼다. `page.screenshot`은 배율이 1로 고정돼 리뷰에서 확대하면 글자가 흐리다. Playwright MCP가 `.playwright-mcp/`에 사본을 하나 더 남기는데 무시해도 된다. 리뷰 페이지 `REVIEW.scale`은 2로 둔다.
    - 캡처 범위는 바뀐 곳이 보이는 만큼만 잡는다. 페이지 전체 길이(`fullPage`)는 쓰지 않는다. 모바일은 바뀐 영역까지 스크롤한 한 화면(390×844)이나, 그 영역만 요소 캡처(`locator.screenshot()`)로 찍는다. 화면 전체가 필요한 항목만 예외로 한다.
    - 상태가 필요한 화면(AI 결과, 목록이 찬 상태)은 Playwright의 `page.route`로 API 응답을 흉내 내서 만든다.
    - 저장·수정 기능은 `page.route`로 POST/PATCH 요청을 가로채 보낸 내용(body)이 맞는지 확인한다. 실제 DB에는 쓰지 않는다.
