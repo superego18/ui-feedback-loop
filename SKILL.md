@@ -42,7 +42,9 @@ Playwright MCP는 `--headless`로 실행한다(ai-config의 MCP 설정에 들어
    - 서버를 끌 때는 그 포트에서 **LISTEN 중인 프로세스만** 끈다: `lsof -ti tcp:<포트> -sTCP:LISTEN | xargs kill`. `-sTCP:LISTEN`이 없으면 그 포트에 접속해 있는 다른 프로세스(앱 프록시, 다른 세션의 서버)까지 함께 꺼진다.
    - 사용자가 앱 프록시로 앱을 쓰는 중이면, 재시작 전에 대화 창에 "잠시 재시작합니다"라고 알린다(터미널에 쓰면 훅이 전달한다).
 3. 바뀐 화면을 1440px·390px로 다시 캡처한다(`.ui-feedback/r<라운드>-<화면>.png`).
-   - **2배 해상도로 찍는다.** [`assets/capture-2x.js`](assets/capture-2x.js)를 `.ui-feedback/capture.js`로 복사하고 맨 위 네 값(URL, 저장 경로, 화면 크기, 영역 선택자)만 바꾼 뒤 `browser_run_code_unsafe`의 `filename`으로 넘긴다. 화면마다 네 값만 바꿔 다시 부른다. `page.screenshot`은 배율이 1로 고정돼 리뷰에서 확대하면 글자가 흐리다. 리뷰 페이지 `REVIEW.scale`은 2로 둔다.
+   - **2배 해상도로 찍는다.** [`assets/capture-2x.js`](assets/capture-2x.js)를 `.ui-feedback/capture.js`로 복사하고 맨 위 다섯 값(URL, 저장 경로, 화면 크기, 영역 선택자, 번호 상자)만 바꾼 뒤 `browser_run_code_unsafe`의 `filename`으로 넘긴다. 화면마다 이 값만 바꿔 다시 부른다. `page.screenshot`은 배율이 1로 고정돼 리뷰에서 확대하면 글자가 흐리다. 리뷰 페이지 `REVIEW.scale`은 2로 둔다.
+   - **번호 상자**: 바뀐 곳을 `MARKS = [{ n: 1, selector: '…' }]`로 지정하면, 찍는 순간 그 요소 위치를 이미지 기준 %로 잰다. 좌표를 눈으로 짐작해 적지 않는다. 전후 이미지에서 같은 의미의 영역은 같은 번호로 맞춘다. 첫 비교는 핵심 3개 안팎으로 한다. 결과에 `missingMarks`가 있으면 선택자를 고친다.
+   - 스크립트가 돌려주는 `image` 객체(`file`, `marks`, `source` = 주소·창 크기·테마·찍은 시각)를 리뷰 페이지 `before`/`after`에 **그대로** 넣는다. 캡처 근거가 자동으로 이미지 아래에 붙는다.
    - 캡처 범위는 바뀐 곳이 보이는 만큼만 잡는다. 페이지 전체 길이(`fullPage`)는 쓰지 않는다. 모바일은 바뀐 영역까지 스크롤한 한 화면(390×844)이나, 그 영역만 요소 캡처(`locator.screenshot()`)로 찍는다. 화면 전체가 필요한 항목만 예외로 한다.
    - 상태가 필요한 화면(AI 결과, 목록이 찬 상태)은 Playwright의 `page.route`로 API 응답을 흉내 내서 만든다.
    - 저장·수정 기능은 `page.route`로 POST/PATCH 요청을 가로채 보낸 내용(body)이 맞는지 확인한다. 실제 DB에는 쓰지 않는다.
@@ -57,6 +59,8 @@ Playwright MCP는 `--headless`로 실행한다(ai-config의 MCP 설정에 들어
 ## 4. 리뷰 페이지
 
 1. [`assets/review-template.html`](assets/review-template.html)을 `.ui-feedback/review.html`로 복사하고 `<title>`과 `REVIEW` 블록만 채운다. `REVIEW.session`에는 이 리뷰를 반영할 자기 세션 이름(등록한 `--name`)을 적는다. 항목 하나 = 사용자가 따로 판단할 수 있는 변경 하나. `changes`는 짧은 줄 2~4개. 이번 변경이 앞 라운드 의견과 부딪히면(예: 시작일부터 그리니 여백이 다시 생김) 숨기지 말고 `changes`에 "확인 요청: …"으로 적어 사용자가 고르게 한다. 이미지 경로는 `.ui-feedback/` 기준 파일명.
+   - 번호 상자를 쓴 항목은 `changes`를 같은 번호로 시작한다(`'1 제목을 한 줄로'`). 번호 배지가 붙고, 그 줄에 마우스를 올리면 해당 상자가 강조된다. 설명은 "전에서 보이는 것 → 후에서 보이는 것 → 차이의 의미" 순서로 짧게 쓴다.
+   - **캡처 근거를 섞지 않는다.** 직접 찍은 화면만 `source`에 주소·창 크기·테마·시각이 붙는다. 과거 캡처·다른 도구 화면·남이 준 이미지는 `source: { direct: false, note: '10/7 기존 도구 캡처, 창 크기 다름' }`로 적어 "직접 캡처 아님"으로 보이게 한다. 이때만 `marks` %를 눈으로 적는다. 전후 조건(창 크기·테마·스크롤·데이터)이 다르면 `note`에 밝힌다. 정지 이미지로 움직임이나 클릭 결과를 확인했다고 쓰지 않고, 소스 코드를 읽은 내용을 화면 비교처럼 쓰지 않는다.
 2. 리뷰 서버를 백그라운드로 켠다(Node 18+, 의존성 없음). 이미 켜져 있으면 그대로 둔다. 페이지는 요청 때마다 다시 읽으므로 라운드가 바뀌어도 재시작할 필요가 없다.
    ```
    node <이 스킬 폴더>/scripts/review-server.mjs --dir .ui-feedback --port 4799
