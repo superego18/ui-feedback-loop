@@ -42,11 +42,16 @@ Playwright MCP는 `--headless`로 실행한다(ai-config의 MCP 설정에 들어
    - 서버를 끌 때는 그 포트에서 **LISTEN 중인 프로세스만** 끈다: `lsof -ti tcp:<포트> -sTCP:LISTEN | xargs kill`. `-sTCP:LISTEN`이 없으면 그 포트에 접속해 있는 다른 프로세스(앱 프록시, 다른 세션의 서버)까지 함께 꺼진다.
    - 사용자가 앱 프록시로 앱을 쓰는 중이면, 재시작 전에 대화 창에 "잠시 재시작합니다"라고 알린다(터미널에 쓰면 훅이 전달한다).
 3. 바뀐 화면을 1440px·390px로 다시 캡처한다(`.ui-feedback/r<라운드>-<화면>.png`).
-   - **2배 해상도로 찍는다.** [`assets/capture-2x.js`](assets/capture-2x.js)를 `.ui-feedback/capture.js`로 복사하고 맨 위 다섯 값(URL, 저장 경로, 화면 크기, 영역 선택자, 번호 상자)만 바꾼 뒤 `browser_run_code_unsafe`의 `filename`으로 넘긴다. 화면마다 이 값만 바꿔 다시 부른다. `page.screenshot`은 배율이 1로 고정돼 리뷰에서 확대하면 글자가 흐리다. 리뷰 페이지 `REVIEW.scale`은 2로 둔다.
-   - **번호 상자**: 바뀐 곳을 `MARKS = [{ n: 1, selector: '…' }]`로 지정하면, 찍는 순간 그 요소 위치를 이미지 기준 %로 잰다. 좌표를 눈으로 짐작해 적지 않는다. 전후 이미지에서 같은 의미의 영역은 같은 번호로 맞춘다. 첫 비교는 핵심 3개 안팎으로 한다. 결과에 `missingMarks`가 있으면 선택자를 고친다.
-   - 스크립트가 돌려주는 `image` 객체(`file`, `marks`, `source` = 주소·창 크기·테마·찍은 시각)를 리뷰 페이지 `before`/`after`에 **그대로** 넣는다. 캡처 근거가 자동으로 이미지 아래에 붙는다.
+   - **화면마다 레시피 하나로 찍는다.** `.ui-feedback/captures/<화면 이름>.js`에 `({ url, viewport, selector, marks, mocks, steps })` 객체 하나를 적는다(형식은 [`scripts/make-capture.mjs`](scripts/make-capture.mjs) 첫머리). 같은 화면은 차수가 바뀌어도 같은 레시피를 고쳐 쓰고, 캡처 스크립트 전체를 복사하지 않는다.
+     ```
+     node <이 스킬 폴더>/scripts/make-capture.mjs --recipe <화면 이름> --round <차수> --dir .ui-feedback --base http://localhost:<앱 포트>
+     ```
+     만들어진 `.ui-feedback/capture.js`(매번 덮어씀)를 `browser_run_code_unsafe`의 `filename`으로 넘긴다. 이미지는 `r<차수>-<화면 이름>.png`로 저장되고, 찍은 조건(레시피·차수·예시 응답·조작 여부)은 리뷰 서버 캡처 기록(`.ui-feedback/captures.json`)에 남는다.
+   - **2배 해상도로 찍는다.** 틀([`assets/capture-2x.js`](assets/capture-2x.js))이 CDP로 배율 2를 건다. `page.screenshot`은 배율이 1로 고정돼 리뷰에서 확대하면 글자가 흐리다. 리뷰 페이지 `REVIEW.scale`은 2로 둔다.
+   - **번호 상자**: 레시피 `marks: [{ n: 1, selector: '…' }]`로 바뀐 곳을 지정하면, 찍는 순간 그 요소 위치를 이미지 기준 %로 잰다. 좌표를 눈으로 짐작해 적지 않는다. 전후 이미지에서 같은 의미의 영역은 같은 번호로 맞춘다. 첫 비교는 핵심 3개 안팎으로 한다. 결과에 `missingMarks`가 있으면 선택자를 고친다.
+   - 스크립트가 돌려주는 `image` 객체(`file`, `marks`, `source` = 주소·창 크기·테마·찍은 시각·레시피·예시 응답)를 리뷰 페이지 `before`/`after`에 **그대로** 넣는다. 캡처 근거가 자동으로 이미지 아래에 붙고, 예시 응답으로 찍었으면 "예시 데이터: …"가, 클릭·입력으로 상태를 만들었으면 "조작 후 캡처"가 눈에 띄게 붙는다.
    - 캡처 범위는 바뀐 곳이 보이는 만큼만 잡는다. 페이지 전체 길이(`fullPage`)는 쓰지 않는다. 모바일은 바뀐 영역까지 스크롤한 한 화면(390×844)이나, 그 영역만 요소 캡처(`locator.screenshot()`)로 찍는다. 화면 전체가 필요한 항목만 예외로 한다.
-   - 상태가 필요한 화면(AI 결과, 목록이 찬 상태)은 Playwright의 `page.route`로 API 응답을 흉내 내서 만든다.
+   - 상태가 필요한 화면(AI 결과, 목록이 찬 상태)은 레시피 `mocks`로 API 응답을 흉내 내고(`label`에 사람이 읽을 이름), 클릭·입력은 `steps`에 적는다. 실행되면 실제 데이터를 바꾸는 요청(수집 시작 등)도 `mocks`로 막는다.
    - 저장·수정 기능은 `page.route`로 POST/PATCH 요청을 가로채 보낸 내용(body)이 맞는지 확인한다. 실제 DB에는 쓰지 않는다.
 4. 오류와 화면 넘침을 확인한다.
    - 브라우저: `console` error와 `pageerror` 이벤트. 리스너가 놓치는 경우가 있어 `.playwright-mcp/console-*.log`도 함께 본다.
@@ -143,6 +148,8 @@ node <이 스킬 폴더>/scripts/app-proxy.mjs --app http://localhost:<앱 포�
 완료 기준: 마지막 라운드의 모든 항목이 "좋음"이고, 반영하지 않은 메모 요청이 없고, 기록부에 "대기"가 없다(보류는 이유와 함께 사용자에게 알렸다).
 
 ## 마무리
+
+- 캡처 정리: `node <이 스킬 폴더>/scripts/prune-captures.mjs --dir .ui-feedback --keep 5`로 지울 목록(최근 5개 차수보다 오래된 이미지, 예전 방식 캡처 스크립트 `cap*.js`)을 사용자에게 보여 주고, 확인받은 뒤 `--apply`로 지운다. 레시피와 지금 리뷰 페이지가 쓰는 이미지는 남는다. 라운드가 길어져 이미지가 많이 쌓였을 때도 같은 방법으로 정리한다.
 
 - 리뷰 서버를 끈다.
 - `.ui-feedback/`과 `.playwright-mcp/`를 지울지 사용자에게 묻는다(평가 기록을 남기고 싶어 할 수 있다).
