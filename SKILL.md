@@ -67,6 +67,7 @@ Playwright MCP는 `--headless`로 실행한다(ai-config의 MCP 설정에 들어
 - **전후**: `before`/`after`를 쓴다. 평가는 좋음 / 수정 필요 / 되돌리기.
 - **추천안끼리, 다른 사람 결과물과 지금 시스템**: `options: [{ label, note, shots | demo }]`를 쓴다. 평가는 안 이름 중 하나 또는 "다른 방향". 다른 사람 것은 `source: { direct: false, note }`로 적는다.
 - **보기 형식**: 겉모습은 캡처(`shots`)로 보여 준다. 누르는 감각·애니메이션·전환처럼 정지 이미지로 볼 수 없는 차이는 실제로 동작하는 HTML 체험 페이지를 `.ui-feedback/demo-<이름>.html`로 만들어 `demo`에 경로를 준다. 페이지 안에 iframe으로 뜬다. 한 파일로 여러 안을 만들면 `?mode=A`처럼 나눠 띄운다. 체험 페이지에는 대화창 위젯을 넣지 않는다(비교 페이지에 이미 있다).
+- **화면 비교는 항상 데스크톱과 모바일(390px)을 함께 넣는다.** 모바일에서 달라지지 않았어도 넣고 `note`에 "모바일도 같음"이라고 적는다. 직접 찍은 캡처 중 모바일 폭이 없으면 페이지에 "모바일(390px) 캡처가 없습니다"가 뜬다.
 - 라운드와 상관없는 비교는 `round`에 영문 id(`'chips'`)를, `name`에 이름을 주고 `.ui-feedback/review-<id>.html`로 둔다. 평가는 `r<id>.json`에 쌓인다.
 
 1. [`assets/review-template.html`](assets/review-template.html)을 `.ui-feedback/review.html`로 복사하고 `<title>`과 `REVIEW` 블록만 채운다. `REVIEW.session`에는 이 리뷰를 반영할 자기 세션 이름(등록한 `--name`)을 적는다. 항목 하나 = 사용자가 따로 판단할 수 있는 변경 하나. `changes`는 짧은 줄 2~4개. 이번 변경이 앞 라운드 의견과 부딪히면(예: 시작일부터 그리니 여백이 다시 생김) 숨기지 말고 `changes`에 "확인 요청: …"으로 적어 사용자가 고르게 한다. 이미지 경로는 `.ui-feedback/` 기준 파일명.
