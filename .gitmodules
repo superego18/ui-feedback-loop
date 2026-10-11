@@ -1,0 +1,6 @@
+[submodule "vendor/agent-chat-widget"]
+	path = vendor/agent-chat-widget
+	url = https://github.com/superego18/agent-chat-widget.git
+[submodule "vendor/ui-review-page"]
+	path = vendor/ui-review-page
+	url = https://github.com/superego18/ui-review-page.git
