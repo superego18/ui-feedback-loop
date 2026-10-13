@@ -26,7 +26,7 @@ const review = createReviewHandler({
   onDone: ({ round, summary, session }) => {
     const reviewer = chat.findSessionByKey(session);
     if (!reviewer) return;
-    chat.addChat({ from: 'user', to: reviewer.sessionId, context: 'review', round, noQueue: true, text: summary });
+    chat.addChat({ from: 'user', to: reviewer.sessionId, context: 'review', round, noQueue: true, keepUnread: true, text: summary });
     if (reviewer.tool === 'codex') {
       chat.queueText(reviewer, `${chat.QUEUE_PREFIX}비교 페이지 · ${round}차] 피드백 확인해. 사용자가 ${round}차 비교 페이지에서 평가 완료를 표시했습니다. .ui-feedback/r${round}.json 을 읽고 ui-feedback-loop 5단계대로 반영하세요.`);
     }
