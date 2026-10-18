@@ -26,10 +26,15 @@ const review = createReviewHandler({
   onDone: ({ round, summary, session }) => {
     const reviewer = chat.findSessionByKey(session);
     if (!reviewer) return;
-    chat.addChat({ from: 'user', to: reviewer.sessionId, context: 'review', round, noQueue: true, keepUnread: true, text: summary });
-    if (reviewer.tool === 'codex') {
-      chat.queueText(reviewer, `${chat.QUEUE_PREFIX}비교 페이지 · ${round}차] 피드백 확인해. 사용자가 ${round}차 비교 페이지에서 평가 완료를 표시했습니다. .ui-feedback/r${round}.json 을 읽고 ui-feedback-loop 5단계대로 반영하세요.`);
-    }
+    const file = path.join(root, `r${round}.json`);
+    const footer = `(.ui-feedback/r${round}.json)`;
+    const locatedSummary = summary.endsWith(footer) ? `${summary.slice(0, -footer.length)}(${file})` : summary;
+    const text = [
+      `피드백 확인해. 사용자가 ${round}차 비교 페이지에서 평가 완료를 표시했습니다. ${JSON.stringify(file)} 을 읽고 ui-feedback-loop 5단계대로 반영하세요.`,
+      `평가와 상관없이 모든 항목의 memo, 이미지 핀 pins, 전체 의견 overall을 읽고 요청을 반영하고 질문에 답하세요. ${JSON.stringify(path.join(root, 'chat.json'))}와 ${JSON.stringify(path.join(root, 'requests.md'))}에서 이번 라운드 요청도 확인하세요.`,
+      locatedSummary,
+    ].join('\n\n');
+    chat.addChat({ from: 'user', to: reviewer.sessionId, context: 'review', round, keepUnread: true, text });
   },
 });
 
