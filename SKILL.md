@@ -84,6 +84,7 @@ Playwright MCP는 `--headless`로 실행한다(ai-config의 MCP 설정에 들어
    - 없으면 macOS: `nohup node … > .ui-feedback/server.log 2>&1 &`, Windows: `Start-Process node -ArgumentList '…' -WindowStyle Hidden`.
 3. `curl -s http://localhost:4799/api/feedback?round=<라운드>`로 응답이 오는지 한 번 확인한다.
 4. **세션 등록**(라운드마다가 아니라 세션을 시작할 때 한 번). 한 프로젝트에 관련된 세션마다 이름을 붙여 등록하면, 비교 페이지·앱 피드백 버튼의 대화 창에 세션별 탭이 생긴다. 사용자는 한 화면에서 세션을 골라 대화하고, 그 세션의 터미널 대화도 빠짐없이 함께 본다.
+   - **Orca에서 Claude → Codex 이관 또는 기존 세션 재연결**이면, 새 등록·훅 설치보다 먼저 [대화창 이관 가이드](docs/orca-provider-handoff.md)를 따른다. 기존 역할 탭·보관함·답장 연결·모바일 주소를 보존하고, 현재 native 입력에서 실제 수신을 확인한 뒤 연결 완료로 판정한다.
    ```
    node <이 스킬 폴더>/scripts/install-hooks.mjs --project .
    node <이 스킬 폴더>/scripts/register-session.mjs --dir .ui-feedback --name "작업 세션" --agent "Claude Code" --port 4799 --marker uifb-<임의 8자>
@@ -91,7 +92,7 @@ Playwright MCP는 `--headless`로 실행한다(ai-config의 MCP 설정에 들어
    - `install-hooks.mjs`(Claude Code): 이 프로젝트 `.claude/settings.local.json`에 중계 훅(`UserPromptSubmit`, `MessageDisplay`, `PreToolUse`, `PostToolUse`, `Stop`, `Notification`)을 이 컴퓨터의 절대 경로로 넣고 `.gitignore`에 추가한다. 실행 중인 세션에도 바로 적용된다. 훅은 화면 출력을 바꾸지 않고, 등록된 세션이 아니면 아무것도 하지 않는다. 마무리 때 `--remove`로 뺀다.
    - `--name`: 탭에 보일 역할 이름. 평가를 반영하는 세션은 "작업 세션", 스킬을 다듬는 세션은 "스킬 세션"처럼 정한다. 같은 이름으로 다시 등록하면 새 세션으로 바뀐다.
    - `--marker`에는 그때그때 지어낸 고유한 글자를 **그대로** 적는다(셸 변수 금지).
-   - Codex는 훅이 없어서 비교 페이지 서버가 Codex 대화 기록 파일을 읽어 그 세션 탭에 보여 준다. 다른 세션이 대신 등록할 때는 `--tool codex`(또는 `claude`)를 붙인다. 표시 글자가 등록하는 쪽 기록에도 남아서 엉뚱한 세션이 등록된다.
+   - 이 도구의 Codex 통합은 Claude 중계 훅 대신 Codex 기록 파일을 읽어 탭에 보여 준다. 대상 Codex 세션이 직접 새 marker와 `--tool codex --agent Codex`로 등록한다. 다른 세션이 같은 marker를 먼저 쓰면 그 기록을 잘못 찾을 수 있다.
    - **Codex 상시 대화**: Codex 세션 탭으로 온 메시지는 비교 페이지 서버가 `codex queue --thread <스레드 id>`로 그 세션에 바로 넣는다(Codex CLI 0.149 이상). 쉬고 있으면 그 자리에서 새 턴이 시작되고, 작업 중이면 턴이 끝난 뒤 처리된다. 감시 명령이 필요 없고, 탭의 큐 설정 표시와 접수 성공, 실제 세션 입력 수신은 구분한다. 설정만으로 실행 중이거나 읽었다고 표시하지 않는다. Codex는 터미널에 답하면 되고(기록으로 탭에 보인다), 답장 스크립트를 쓰지 않는다(두 번 보인다).
    - Codex 전송 실패·재시작 복구·읽음 근거를 다룰 때는 [공통 전송 계약](vendor/agent-chat-widget/docs/reliable-delivery.md)을 읽는다. 결과 미확인 메시지는 중복 위험 확인 없이 자동 재전송하지 않는다.
 5. **자동 이어가기**: 백그라운드 명령이 끝나면 에이전트를 다시 깨워 주는 도구(Claude Code의 `run_in_background`)에서만 감시를 켠다. 감시는 **자기 세션에게 온 메시지에만** 깨어난다. 평가를 반영하는 세션만 `--round`와 `--done`을 붙여 완료 표시도 받는다.
@@ -124,7 +125,7 @@ Playwright MCP는 `--headless`로 실행한다(ai-config의 MCP 설정에 들어
    - 상태: 대기 → 반영함(커밋·라운드) / 보류(이유) / 전달함(세션). 위치가 붙은 요청은 "저장 시각·커밋·당시 문구"를 함께 적는다. 화면이 그 뒤로 바뀌었으면 그 커밋과 지금 코드를 비교해 대상을 찾고, 못 찾으면 추측하지 말고 사용자에게 묻는다.
    - 답할 때 항목별로 어느 단계에 반영할지 한 줄씩 알린다. 라운드 요약(5단계)과 마무리 때 기록부에서 "반영함/보류/대기"를 항목별로 다시 알린다. 대기가 남아 있으면 끝났다고 하지 않는다.
    질문은 바로 답한다. 수정 요청은 "다음 라운드에 반영합니다"라고 답하고 5단계에서 메모처럼 반영한다. 사용자가 "지금 바로"라고 하면 즉시 고치고, 고친 뒤 3단계(검증)부터 다시 돈다. 자기 역할 밖의 요청(예: 작업 세션에 온 스킬 의견)은 그 역할의 세션에 전달했다고 답하고 전달한다. 그런 세션이 없으면 `.ui-feedback/skill-feedback.md`에 적고 5단계 요약 끝에 알린다.
-3. **감시를 바로 다시 켠다**(마지막 답보다 먼저). 켜지 않으면 탭이 "자동으로 읽지 않음"으로 바뀌고 다음 메시지도 완료 표시도 놓친다.
+3. **Claude 감시를 쓰는 세션은 감시를 바로 다시 켠다**(마지막 답보다 먼저). 켜지 않으면 탭이 "자동으로 읽지 않음"으로 바뀌고 다음 메시지도 완료 표시도 놓친다. Codex는 위의 큐 경로를 사용한다.
 
 ### 보관함
 
