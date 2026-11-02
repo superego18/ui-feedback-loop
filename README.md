@@ -11,7 +11,9 @@
 - [agent-chat-widget](https://github.com/superego18/agent-chat-widget): 대화창(위젯·대화 서버·세션 연결·앱 프록시·알림)
 - [ui-review-page](https://github.com/superego18/ui-review-page): 비교 페이지(페이지·평가 저장·캡처)
 
-이 스킬은 둘을 한 서버로 붙여 쓰고(`scripts/review-server.mjs`), 라운드 작업 방식(`SKILL.md`)을 담습니다.
+이 스킬은 비교 페이지와 채팅 API를 한 도구 서버로 붙여 쓰고(`scripts/review-server.mjs`), 라운드 작업 방식(`SKILL.md`)을 담습니다. 실제 앱·저장 API는 이 도구 서버와 별도 프로세스로 실행합니다.
+
+앱 프록시의 위젯도 이 서버의 채팅 API를 사용합니다. 비교 페이지를 사용하지 않더라도 채팅을 쓰고 있다면 서버 전체를 끄면 안 됩니다. 검토 시작·종료나 캡처 때문에 사용 중인 공유 앱을 재시작하지 않으며, 같은 프로세스에 여러 기능이 있으면 선택 종료 가능 여부와 실제 영향을 먼저 확인합니다. 자세한 기준은 [서버의 수명과 소유권](SKILL.md#서버의-수명과-소유권)을 따릅니다.
 
 ## 주요 기능
 
