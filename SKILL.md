@@ -15,7 +15,7 @@ description: 화면을 직접 띄워 UI를 감사하고, 고친 뒤 전후 스�
 
 라운드 도중 세션이 바뀌거나 중단됐다가 이어가면 **3단계(검증)부터 다시** 한다. 타입 체크와 테스트는 화면 결과를 보지 못하므로, 캡처 전의 코드는 "검증 전"으로 본다.
 
-시작 전에 프로젝트의 디자인 기준을 찾는다: `.ui-design/system.md`, `DESIGN.md`, 디자인 스킬(`ui-design`, `impeccable` 등), CLAUDE.md·AGENTS.md의 UI 규칙. 있으면 그 기준으로 판단하고 구현한다.
+시작 전에 프로젝트의 디자인 기준을 찾는다: `.ui-design/system.md`, `DESIGN.md`, 프로젝트 디자인 스킬, CLAUDE.md·AGENTS.md의 UI 규칙을 먼저 쓰고, 그다음 `modern-web-ui` 원칙을 따른다. `impeccable` 등 다른 디자인 스킬이 `modern-web-ui`와 다르면 `modern-web-ui`를 따른다.
 
 라운드의 모든 파일은 프로젝트의 `.ui-feedback/`에 모은다(비교 페이지, 캡처, 평가). 이 폴더와 Playwright 출력 폴더 `.playwright-mcp/`가 `.gitignore`에 없으면 추가한다. Playwright MCP는 프로젝트 폴더 안에만 파일을 저장할 수 있어서, 캡처도 바로 `.ui-feedback/`에 저장한다.
 
